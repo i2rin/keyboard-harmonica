@@ -36,9 +36,10 @@ setInterval(() => {
 
 http.createServer((req, res) => {
   const url = new URL(req.url, "http://x");
-  if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
-    fs.readFile(PAGE, (err, buf) => {
-      if (err) { res.writeHead(500); res.end("index.html が見つかりません"); return; }
+  if (req.method === "GET" && ["/", "/index.html", "/display.html"].includes(url.pathname)) {
+    const file = url.pathname === "/display.html" ? path.join(__dirname, "display.html") : PAGE;
+    fs.readFile(file, (err, buf) => {
+      if (err) { res.writeHead(500); res.end(path.basename(file) + " が見つかりません"); return; }
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
       res.end(buf);
     });
@@ -69,9 +70,33 @@ http.createServer((req, res) => {
   }
   res.writeHead(404); res.end();
 }).listen(PORT, () => {
-  const ips = Object.values(os.networkInterfaces()).flat().filter(a => a && a.family === "IPv4" && !a.internal).map(a => a.address);
   console.log("鍵盤ハーモニカ展示デモ サーバー起動");
-  console.log(`  表示用（このPC）:  http://localhost:${PORT}/#display`);
-  ips.forEach(ip => console.log(`  タブレット:        http://${ip}:${PORT}/#controller`));
+  console.log(`  表示用（このPC）:  http://localhost:${PORT}/display.html`);
   console.log("止めるときは Ctrl+C");
+  watchAddresses();
 });
+
+// Print the tablet URL for every network this PC is on, and keep watching:
+// USB tethering or Wi-Fi turned on after start-up shows up here within a few seconds.
+function lanAddresses() {
+  return Object.values(os.networkInterfaces()).flat()
+    .filter(a => a && a.family === "IPv4" && !a.internal && !a.address.startsWith("169.254."))
+    .map(a => a.address);
+}
+function watchAddresses() {
+  let known = new Set(), warned = false;
+  const check = () => {
+    const now = lanAddresses();
+    now.filter(ip => !known.has(ip)).forEach(ip => console.log(`  タブレット:        http://${ip}:${PORT}/#controller`));
+    known.forEach(ip => { if (!now.includes(ip)) console.log(`  （${ip} のネットワークが切れました）`); });
+    known = new Set(now);
+    if (!now.length && !warned) {
+      console.log("  タブレット用のネットワークがまだありません。");
+      console.log("  USBテザリング（またはWi-Fi）をオンにすると、ここにタブレット用URLが表示されます。");
+      warned = true;
+    }
+    if (now.length) warned = false;
+  };
+  check();
+  setInterval(check, 2000);
+}

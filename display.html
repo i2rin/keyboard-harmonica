@@ -1,0 +1,809 @@
+<title>鍵盤ハーモニカのリード</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one 16:9 stage locked to the source image; every overlay uses the image's own 1988×1120 coordinates. Black stays pure black so it turns transparent on the display. */
+:root {
+  --void: #000;          /* transparent on the display */
+  --glow: #3cc8ff;       /* matches the X-ray line color */
+  --glow-hot: #b8f0ff;
+  --glow-dim: rgba(60, 200, 255, .38);
+  --ink: #dff7ff;
+  --font-ja: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--void); color: var(--ink); font-family: var(--font-ja);
+  display: grid; place-items: center; overflow: hidden;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0; box-sizing: border-box;
+  user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.stage {
+  position: relative; container-type: inline-size;
+  width: min(100%, calc(100dvh * 1988 / 1120)); max-width: 100%;
+  aspect-ratio: 1988 / 1120;
+}
+.stage > canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.stage > canvas { pointer-events: none; }
+
+.head { position: absolute; left: 5.1%; top: 4.2%; right: 15%; }
+.head h1 { margin: 0; font-weight: 700; font-size: 2.5cqw; letter-spacing: .06em; color: var(--glow-hot); text-shadow: 0 0 1cqw var(--glow); text-wrap: balance; }
+.foot { position: absolute; left: 5.1%; right: 1.4%; top: 92.4%; display: flex; justify-content: space-between; align-items: baseline; gap: 2cqw; }
+.steps { display: flex; gap: 2.2cqw; margin: 0; padding: 0; list-style: none; font-size: 1.3cqw; }
+.steps li { color: var(--glow-dim); transition: color .25s, text-shadow .25s; white-space: nowrap; }
+.steps li b { font-family: var(--font-data); font-weight: 500; margin-right: .5em; }
+.steps li.on { color: var(--glow-hot); text-shadow: 0 0 .8cqw var(--glow); }
+
+.label {
+  position: absolute; top: 10.6%; transform: translateX(-50%);
+  display: grid; justify-items: center; gap: .2cqw; text-align: center;
+  opacity: 0; transition: opacity .2s, left .12s ease-out; pointer-events: none;
+}
+.label.on { opacity: 1; }
+.label .name { font-size: 3.4cqw; font-weight: 700; line-height: 1; color: var(--glow-hot); text-shadow: 0 0 1.2cqw var(--glow); }
+.label .hz { font-family: var(--font-data); font-size: 1.15cqw; color: var(--glow); font-variant-numeric: tabular-nums; }
+.label .say { font-size: 1.1cqw; color: var(--ink); white-space: nowrap; }
+
+.pad { position: absolute; left: 14.8%; right: 1.4%; top: 78.6%; height: 12.2%; display: flex; gap: 1.2cqw; }
+.key {
+  flex: 1; min-width: 0; border-radius: .9cqw; cursor: pointer;
+  border: .16cqw solid var(--glow); background: transparent; color: var(--glow-hot);
+  font-family: var(--font-ja); display: grid; place-content: center; gap: .3cqw;
+  box-shadow: 0 0 .9cqw rgba(60,200,255,.35), inset 0 0 .9cqw rgba(60,200,255,.2);
+  transition: background .08s, box-shadow .08s, transform .08s;
+  touch-action: none;
+}
+.key .n { font-size: 3cqw; font-weight: 700; line-height: 1; }
+.key .c { font-family: var(--font-data); font-size: 1cqw; color: var(--glow); }
+.key.down { background: rgba(60,200,255,.32); transform: translateY(.25cqw); box-shadow: 0 0 2.4cqw var(--glow), inset 0 0 1.6cqw rgba(184,240,255,.6); }
+.key:focus-visible { outline: .2cqw solid var(--glow-hot); outline-offset: .3cqw; }
+.hint { font-size: 1.1cqw; color: var(--glow-dim); white-space: nowrap; }
+
+.fs { position: absolute; right: 1%; top: 1.5%; font: 500 .9cqw var(--font-ja); color: var(--glow-dim); background: transparent; border: .1cqw solid rgba(60,200,255,.25); border-radius: .5cqw; padding: .4cqw .8cqw; cursor: pointer; }
+.fs:focus-visible { outline: .15cqw solid var(--glow); }
+:fullscreen .fs { display: none; }
+
+.status { position: absolute; left: 1%; top: 1.5%; font: 500 .9cqw var(--font-ja); color: var(--glow-dim); white-space: nowrap; }
+.status::before { content: ""; display: inline-block; width: .6em; height: .6em; border-radius: 50%; margin-right: .5em; background: currentColor; vertical-align: .05em; }
+.status.ok { color: var(--glow); }
+.unlock {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  font: 700 1.6cqw var(--font-ja); color: var(--glow-hot); background: rgba(0,0,0,.85);
+  border: .15cqw solid var(--glow); border-radius: 1cqw; padding: 1.4cqw 2.4cqw; cursor: pointer;
+  box-shadow: 0 0 2cqw rgba(60,200,255,.4);
+}
+
+/* views: #display = transparent screen only, #controller = the visitor's tablet */
+body.v-display .pad, body.v-display .hint-local { display: none; }
+/* on-site adjustments: shift (instrument, title, note label; the step line stays) and keystone (whole stage) */
+.stage > canvas, .head, .label { translate: 0 var(--shift, 0cm); }
+.stage { transform-origin: 0 0; }
+.tune {
+  position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); top: max(16px, env(safe-area-inset-top, 0px)); z-index: 20;
+  width: min(320px, calc(100vw - 32px)); box-sizing: border-box; padding: 16px; display: grid; gap: 14px;
+  background: var(--void); border: 1px solid var(--glow); border-radius: 12px; box-shadow: 0 0 18px rgba(60,200,255,.35);
+  font: 500 14px var(--font-ja); color: var(--ink);
+}
+.tune h2 { margin: 0; font-size: 15px; font-weight: 700; color: var(--glow-hot); letter-spacing: .05em; }
+.tune label { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; }
+.tune label output { font-family: var(--font-data); font-variant-numeric: tabular-nums; color: var(--glow); }
+.tune input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--glow); }
+.tune .row { display: flex; gap: 8px; justify-content: space-between; align-items: center; }
+.tune button { font: 500 13px var(--font-ja); color: var(--glow-hot); background: transparent; border: 1px solid var(--glow-dim); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+.tune button:focus-visible, .tune input:focus-visible { outline: 2px solid var(--glow-hot); outline-offset: 2px; }
+.tune p { margin: 0; font-size: 12px; color: var(--glow-dim); line-height: 1.6; }
+.tuneBtn { position: absolute; right: 7%; top: 1.5%; font: 500 .9cqw var(--font-ja); color: var(--glow-dim); background: transparent; border: .1cqw solid rgba(60,200,255,.25); border-radius: .5cqw; padding: .4cqw .8cqw; cursor: pointer; }
+body.v-controller .tune, .tune[hidden], [hidden] { display: none !important; }
+.nudge { position: fixed; left: 50%; top: 24px; z-index: 21; transform: translateX(-50%); font: 500 14px var(--font-ja); color: var(--glow); border: 1px solid var(--glow-dim); border-radius: 8px; padding: 6px 12px; background: var(--void); opacity: 0; transition: opacity .3s; pointer-events: none; }
+.nudge.on { opacity: 1; }
+body:not(.v-display) .hint-remote { display: none; }
+.ctrl { display: none; }
+body.v-controller .stage { display: none; }
+body.v-controller { place-items: stretch; padding-block: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-bottom, 0px)); }
+body.v-controller .ctrl {
+  display: grid; grid-template-rows: auto 1fr auto; gap: clamp(12px, 3vh, 28px);
+  width: 100%; height: 100%; max-width: 1400px; margin-inline: auto; min-width: 0;
+}
+.ctrl header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.ctrl h1 { margin: 0; font-size: clamp(20px, 3.4vw, 34px); font-weight: 700; letter-spacing: .05em; color: var(--glow-hot); text-shadow: 0 0 12px var(--glow); text-wrap: balance; }
+.ctrl .cstatus { font-size: 14px; color: var(--glow-dim); white-space: nowrap; }
+.ctrl .cstatus.ok { color: var(--glow); }
+.ctrl .cstatus::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; background: currentColor; }
+.ctrl .cpad { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: clamp(8px, 1.4vw, 18px); min-height: 0; }
+.ctrl .key { border-width: 2px; border-radius: 14px; gap: 10px; box-shadow: 0 0 14px rgba(60,200,255,.35), inset 0 0 14px rgba(60,200,255,.2); }
+.ctrl .key .n { font-size: clamp(24px, 4.2vw, 56px); white-space: nowrap; }
+.ctrl .key .c { font-size: clamp(12px, 1.5vw, 18px); }
+.ctrl .key.down { transform: translateY(4px); box-shadow: 0 0 34px var(--glow), inset 0 0 24px rgba(184,240,255,.6); }
+.ctrl footer { font-size: clamp(14px, 1.8vw, 20px); color: var(--glow); text-align: center; }
+@media (orientation: portrait) { .ctrl .cpad { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+</style>
+
+<div class="stage" id="stage">
+  <canvas id="base" role="img" aria-label="32鍵の鍵盤ハーモニカを透視した図。各鍵盤の下にリードが1枚ずつある。"></canvas>
+  <canvas id="fx"></canvas>
+
+  <div class="head">
+    <h1>鍵盤ハーモニカの音が出るしくみ</h1>
+  </div>
+
+  <div class="foot">
+    <ol class="steps" id="steps">
+      <li data-s="0"><b>1</b>息を吹きこむ</li>
+      <li data-s="1"><b>2</b>鍵盤を押すと、その音の弁が開く</li>
+      <li data-s="2"><b>3</b>空気がリードをふるわせて音になる</li>
+    </ol>
+    <span class="hint hint-local">ボタンを押しているあいだ音が鳴ります</span>
+    <span class="hint hint-remote">手元のボタンを押しているあいだ音が鳴ります</span>
+  </div>
+
+  <div class="label" id="label">
+    <span class="name" id="lName">ド</span>
+    <span class="hz" id="lHz">C4 · 262 Hz</span>
+    <span class="say" id="lSay">リードが1秒間に262回ふるえています</span>
+  </div>
+
+  <div class="pad" id="pad"></div>
+  <button class="fs" id="fsBtn" type="button">全画面</button>
+  <button class="tuneBtn" id="tuneBtn" type="button">調整</button>
+  <span class="status" id="status" hidden></span>
+  <button class="unlock" id="unlock" type="button" hidden>クリックして音を出せるようにする</button>
+</div>
+<div class="nudge" id="nudge" aria-live="polite"></div>
+<section class="tune" id="tune" hidden aria-label="表示の調整">
+  <h2>表示の調整</h2>
+  <label for="tFrame">枠の濃さ（本体・鍵盤）<output id="oFrame">100%</output>
+    <input type="range" id="tFrame" min="0" max="200" step="5" value="100"></label>
+  <label for="tShift">上下の位置<output id="oShift">0.0cm</output>
+    <input type="range" id="tShift" min="-10" max="10" step="0.1" value="0"></label>
+  <label for="tKv">台形補正（縦）<output id="oKv">0</output>
+    <input type="range" id="tKv" min="-40" max="40" step="1" value="0"></label>
+  <label for="tKh">台形補正（横）<output id="oKh">0</output>
+    <input type="range" id="tKh" min="-40" max="40" step="1" value="0"></label>
+  <div class="row"><button type="button" id="tReset">初期値に戻す</button><button type="button" id="tClose">閉じる</button></div>
+  <p>P キーでこのパネルを開閉。↑↓ で 0.1cm ずつ、Shift+↑↓ で 1cm ずつ上下に動かせます。設定はこのPCに記憶されます。</p>
+</section>
+
+<main class="ctrl" id="ctrl">
+  <header>
+    <h1>ボタンを押して、鍵盤ハーモニカを鳴らそう</h1>
+    <span class="cstatus" id="cstatus">表示画面を探しています</span>
+  </header>
+  <div class="cpad" id="cpad"></div>
+  <footer>押しているあいだ、正面の画面でリードがふるえます</footer>
+</main>
+
+<script>
+(() => {
+  const W = 1988, H = 1120;
+  // Drawn to the proportions of the museum's 32-key melodica (measured from its photo, ×1.05 px):
+  // F3–C6, 19 white + 13 black keys, mouthpiece at the low end, blue trim on both long sides.
+  // Each reed sits under its own key: white-key reeds under the front of the key, black-key reeds under the black key.
+  const BODY = { x0: 352, x1: 1906, y0: 370, y1: 746 };
+  const KB_X0 = 446, KB_X1 = 1848, KEY_TOP = 393, KEY_BOTTOM = 727, KEY_STEP = 603;
+  const WHITE_P = (KB_X1 - KB_X0) / 19, BLACK_W = WHITE_P * .45;
+  const MOUTH_Y = 633, AIR_Y = 606, REED_W = 14;
+  const LOW_MIDI = 53; // F3
+  // Stretch the drawing sideways to fill the screen width (height stays at the photo's scale)
+  const SX = 1940 / (1906 - 102), OX = 24 - 102 * SX;
+  const mapX = x => OX + x * SX;
+  const KEYS = [];
+  for (let m = LOW_MIDI, w = 0; m <= 84; m++) {
+    const black = [1, 3, 6, 8, 10].includes(m % 12);
+    const k = { midi: m, black };
+    // black keys sit a little off the white-key joint, as on the real keyboard (measured from the product photo)
+    const OFF = { 1: -.08, 3: .04, 6: -.15, 8: 0, 10: .12 };
+    if (black) { k.cx = KB_X0 + (w + OFF[m % 12]) * WHITE_P; }
+    else { k.L = KB_X0 + w * WHITE_P; k.R = k.L + WHITE_P; k.cx = (k.L + k.R) / 2; w++; }
+    KEYS.push(k);
+  }
+  KEYS.forEach((k, i) => {
+    const len = 104 - (i / 31) * 46; // low reeds are longer
+    k.reedBase = k.black ? KEY_STEP - 16 : KEY_BOTTOM - 14;
+    k.reedTop = k.reedBase - len;
+    if (k.black) return;
+    const prev = KEYS[i - 1], next = KEYS[i + 1];
+    k.uL = prev && prev.black ? prev.cx + BLACK_W / 2 : k.L;
+    k.uR = next && next.black ? next.cx - BLACK_W / 2 : k.R;
+  });
+  const NOTES = [
+    { name: "ド",   code: "C4", midi: 60, key: "a", alt: "1" },
+    { name: "レ",   code: "D4", midi: 62, key: "s", alt: "2" },
+    { name: "ミ",   code: "E4", midi: 64, key: "d", alt: "3" },
+    { name: "ファ", code: "F4", midi: 65, key: "f", alt: "4" },
+    { name: "ソ",   code: "G4", midi: 67, key: "g", alt: "5" },
+    { name: "ラ",   code: "A4", midi: 69, key: "h", alt: "6" },
+    { name: "シ",   code: "B4", midi: 71, key: "j", alt: "7" },
+    { name: "ド",   code: "C5", midi: 72, key: "k", alt: "8" },
+  ];
+  NOTES.forEach(n => {
+    const k = KEYS[n.midi - LOW_MIDI];
+    n.freq = 440 * Math.pow(2, (n.midi - 69) / 12);
+    n.x = k.cx; n.reedTop = k.reedTop; n.reedBase = k.reedBase; n.k = n.midi - LOW_MIDI;
+    n.keyShape = [k.L, k.R, k.uL, k.uR];
+  });
+
+  const VIEW = "display"; // display-only build: no on-screen buttons
+  document.body.classList.add("v-" + VIEW);
+
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const MIN_HOLD = 0.45; // seconds a quick tap still sounds
+
+  /* ---------- Audio: free-reed voice ---------- */
+  let ctx = null, master = null, reedWave = null, noiseBuf = null;
+  function initAudio() {
+    if (ctx) { if (ctx.state === "suspended") ctx.resume(); return; }
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -16; comp.ratio.value = 4; comp.attack.value = .005; comp.release.value = .2;
+    master = ctx.createGain(); master.gain.value = .55;
+    master.connect(comp).connect(ctx.destination);
+    // Free reeds give a bright, buzzy spectrum: strong upper harmonics, even ones a bit weaker.
+    const N = 40, re = new Float32Array(N + 1), im = new Float32Array(N + 1);
+    for (let n = 1; n <= N; n++) {
+      let a = 1 / Math.pow(n, 0.85);
+      if (n % 2 === 0) a *= 0.62;
+      if (n === 2) a *= 1.25;
+      im[n] = a * (n % 4 === 3 ? -1 : 1);
+    }
+    reedWave = ctx.createPeriodicWave(re, im);
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+
+  function startVoice(f) {
+    const t = ctx.currentTime;
+    const out = ctx.createGain(); out.gain.value = 0;
+    // body resonance + soften the very top
+    const peak = ctx.createBiquadFilter(); peak.type = "peaking"; peak.frequency.value = 1400; peak.Q.value = 1.1; peak.gain.value = 5;
+    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = .5;
+    lp.frequency.setValueAtTime(1800, t); lp.frequency.linearRampToValueAtTime(5200, t + .06);
+    peak.connect(lp).connect(out).connect(master);
+
+    const o1 = ctx.createOscillator(); o1.setPeriodicWave(reedWave);
+    const o2 = ctx.createOscillator(); o2.setPeriodicWave(reedWave);
+    o1.frequency.value = f; o2.frequency.value = f;
+    // reeds speak slightly flat, then settle
+    o1.detune.setValueAtTime(-18, t);
+    o1.detune.linearRampToValueAtTime(0, t + .07);
+    o2.detune.setValueAtTime(-14, t); o2.detune.linearRampToValueAtTime(5, t + .07);
+    const g1 = ctx.createGain(); g1.gain.value = .22;
+    const g2 = ctx.createGain(); g2.gain.value = .07;
+    o1.connect(g1).connect(peak); o2.connect(g2).connect(peak);
+    // slow breath wobble
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 4.2;
+    const lfoAmt = ctx.createGain(); lfoAmt.gain.value = 2.5;
+    lfo.connect(lfoAmt); lfoAmt.connect(o1.detune); lfoAmt.connect(o2.detune);
+    // breath noise
+    const nz = ctx.createBufferSource(); nz.buffer = noiseBuf; nz.loop = true;
+    const nf = ctx.createBiquadFilter(); nf.type = "bandpass"; nf.frequency.value = Math.min(f * 6, 6000); nf.Q.value = .9;
+    const ng = ctx.createGain(); ng.gain.setValueAtTime(.05, t); ng.gain.linearRampToValueAtTime(.012, t + .12);
+    nz.connect(nf).connect(ng).connect(out);
+
+    out.gain.setValueAtTime(0, t);
+    out.gain.linearRampToValueAtTime(1, t + .035);
+    out.gain.linearRampToValueAtTime(.86, t + .18);
+    [o1, o2, lfo, nz].forEach(s => s.start(t));
+    return { out, srcs: [o1, o2, lfo, nz], t0: t };
+  }
+  function stopVoice(v) {
+    const t = Math.max(ctx.currentTime, v.t0 + MIN_HOLD);
+    v.out.gain.cancelScheduledValues(t);
+    v.out.gain.setValueAtTime(v.out.gain.value || .86, t);
+    v.out.gain.setTargetAtTime(0, t, .03);
+    v.srcs.forEach(s => s.stop(t + .25));
+    return t;
+  }
+
+  /* ---------- State ---------- */
+  const active = new Map(); // note index → { voice, start, releaseAt, amp, phase, valve }
+  const viz = NOTES.map(() => ({ amp: 0, valve: 0, phase: 0, on: false, since: 0, ringT: 0 }));
+  let lastNote = null;
+
+  // What should be sounding = keys held here ∪ keys held on the tablet(s)
+  const localHeld = new Set(), remoteHeld = new Set();
+  function sync() {
+    if (VIEW === "controller") { keys.forEach((b, i) => b.classList.toggle("down", localHeld.has(i))); transport.send([...localHeld]); return; }
+    NOTES.forEach((_, i) => {
+      const want = localHeld.has(i) || remoteHeld.has(i);
+      if (want && !active.has(i)) startNote(i);
+      else if (!want && active.has(i)) stopNote(i);
+    });
+  }
+  function press(i) { if (!localHeld.has(i)) { localHeld.add(i); sync(); } }
+  function release(i) { if (localHeld.delete(i)) sync(); }
+
+  function startNote(i) {
+    initAudio();
+    if (active.has(i)) return;
+    const v = startVoice(NOTES[i].freq);
+    active.set(i, v);
+    const z = viz[i]; z.on = true; z.since = performance.now(); z.offAt = 0;
+    keys[i].classList.add("down");
+    showLabel(i);
+    requestWake();
+  }
+  function stopNote(i) {
+    const v = active.get(i);
+    if (!v) return;
+    active.delete(i);
+    const endT = stopVoice(v);
+    const z = viz[i];
+    z.offAt = performance.now() + Math.max(0, (endT - ctx.currentTime) * 1000);
+    keys[i].classList.remove("down");
+  }
+
+  /* ---------- UI ---------- */
+  const pad = document.getElementById(VIEW === "controller" ? "cpad" : "pad");
+  const keys = NOTES.map((n, i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "key"; b.id = "key-" + n.code;
+    b.setAttribute("aria-label", `${n.name}（${n.code}）を鳴らす`);
+    b.innerHTML = `<span class="n">${n.name}</span><span class="c">${n.code}</span>`;
+    b.addEventListener("pointerdown", e => { e.preventDefault(); b.setPointerCapture?.(e.pointerId); press(i); });
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => b.addEventListener(ev, () => release(i)));
+    b.addEventListener("keydown", e => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); press(i); } });
+    b.addEventListener("keyup", e => { if (e.key === " " || e.key === "Enter") release(i); });
+    b.addEventListener("contextmenu", e => e.preventDefault());
+    pad.appendChild(b);
+    return b;
+  });
+  const keyMap = {};
+  NOTES.forEach((n, i) => { keyMap[n.key] = i; keyMap[n.alt] = i; });
+  addEventListener("keydown", e => { const i = keyMap[e.key.toLowerCase()]; if (i !== undefined && !e.repeat) press(i); });
+  addEventListener("keyup", e => { const i = keyMap[e.key.toLowerCase()]; if (i !== undefined) release(i); });
+  addEventListener("blur", () => [...localHeld].forEach(release));
+
+  const label = document.getElementById("label");
+  const lName = document.getElementById("lName"), lHz = document.getElementById("lHz"), lSay = document.getElementById("lSay");
+  function showLabel(i) {
+    const n = NOTES[i]; lastNote = i;
+    const hz = Math.round(n.freq);
+    lName.textContent = n.name;
+    lHz.textContent = `${n.code} · ${hz} Hz`;
+    lSay.textContent = `リードが1秒間に${hz}回ふるえています`;
+    label.style.left = (Math.min(Math.max(mapX(n.x), 330), 1660) / W * 100) + "%";
+    label.classList.add("on");
+  }
+  const stepEls = [...document.querySelectorAll("#steps li")];
+
+  document.getElementById("fsBtn").addEventListener("click", () => {
+    const el = document.documentElement;
+    (el.requestFullscreen ? el.requestFullscreen() : Promise.reject()).catch(() => {});
+  });
+  let wake = null;
+  function requestWake() {
+    if (wake || !navigator.wakeLock) return;
+    navigator.wakeLock.request("screen").then(w => { wake = w; w.addEventListener("release", () => wake = null); }).catch(() => {});
+  }
+
+  /* ---------- Linking the tablet and the display ---------- */
+  // Inside claude.ai: the artifact's live room (both devices signed in to the same account).
+  // Served by server.js on the venue network: Server-Sent Events, works without internet.
+  const statusEl = document.getElementById(VIEW === "controller" ? "cstatus" : "status");
+  function setStatus(ok, text) { statusEl.hidden = false; statusEl.textContent = text; statusEl.classList.toggle("ok", ok); }
+  const transport = { send() {} };
+
+  function applyRemote(list) {
+    remoteHeld.clear();
+    (Array.isArray(list) ? list : []).forEach(i => { if (Number.isInteger(i) && i >= 0 && i < NOTES.length) remoteHeld.add(i); });
+    sync();
+  }
+
+  async function connectRoom() {
+    const room = await window.claude.use("room");
+    if (!room) { setStatus(false, "接続できません（claude.aiにサインインして開いてください）"); return; }
+    if (VIEW === "controller") {
+      transport.send = held => room.presence({ role: "controller", held }).catch(() => {});
+      transport.send([]);
+      room.onPeers(ch => {
+        const n = ch.peers.filter(p => p.presence && p.presence.role === "display").length;
+        setStatus(n > 0, n > 0 ? "表示画面とつながっています" : "表示画面を探しています");
+      });
+    } else {
+      room.presence({ role: "display" }).catch(() => {});
+      room.onPeers(ch => {
+        const held = new Set(); let n = 0;
+        ch.peers.forEach(p => {
+          if (!p.presence || p.presence.role !== "controller") return;
+          n++;
+          (Array.isArray(p.presence.held) ? p.presence.held : []).forEach(i => held.add(i));
+        });
+        applyRemote([...held]);
+        setStatus(n > 0, n > 0 ? `操作パネル ${n}台とつながっています` : "操作パネルを待っています");
+      });
+    }
+  }
+
+  function connectLocal() {
+    if (VIEW === "controller") {
+      const id = Math.random().toString(36).slice(2);
+      let last = [];
+      const post = held => fetch("/held", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, held }) })
+        .then(r => { if (!r.ok) throw 0; setStatus(true, "表示画面とつながっています"); })
+        .catch(() => setStatus(false, "サーバーにつながりません"));
+      transport.send = held => { last = held; post(held); };
+      setInterval(() => post(last), 1000); // heartbeat: the server drops a silent tablet's notes
+      addEventListener("pagehide", () => navigator.sendBeacon?.("/held", new Blob([JSON.stringify({ id, held: [] })], { type: "application/json" })));
+      post([]);
+    } else {
+      const es = new EventSource("/events");
+      es.onmessage = e => { try { const m = JSON.parse(e.data); applyRemote(m.held); setStatus(m.controllers > 0, m.controllers > 0 ? `操作パネル ${m.controllers}台とつながっています` : "操作パネルを待っています"); } catch {} };
+      es.onerror = () => { applyRemote([]); setStatus(false, "サーバーにつながりません（再接続中）"); };
+    }
+  }
+
+  if (VIEW !== "solo") {
+    if (window.claude && typeof window.claude.use === "function") connectRoom();
+    else if (location.protocol.startsWith("http")) connectLocal();
+    else setStatus(false, "server.js から開くと操作パネルとつながります");
+  }
+
+  /* ---------- On-site adjustments (frame density, position, keystone) ---------- */
+  // Keystone: map the stage rectangle onto a trapezoid with a CSS matrix3d (projector-style corner correction).
+  function quadMatrix(w, h, q) {
+    // solve for x' = (a x + b y + c) / (g x + h y + 1), y' = (d x + e y + f) / (g x + h y + 1)
+    const src = [[0, 0], [w, 0], [w, h], [0, h]], A = [], B = [];
+    for (let i = 0; i < 4; i++) {
+      const [x, y] = src[i], [u, v] = q[i];
+      A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]); B.push(u);
+      A.push([0, 0, 0, x, y, 1, -v * x, -v * y]); B.push(v);
+    }
+    for (let col = 0; col < 8; col++) {
+      let piv = col; for (let r = col + 1; r < 8; r++) if (Math.abs(A[r][col]) > Math.abs(A[piv][col])) piv = r;
+      [A[col], A[piv]] = [A[piv], A[col]]; [B[col], B[piv]] = [B[piv], B[col]];
+      for (let r = 0; r < 8; r++) if (r !== col) {
+        const f = A[r][col] / A[col][col];
+        for (let k2 = col; k2 < 8; k2++) A[r][k2] -= f * A[col][k2];
+        B[r] -= f * B[col];
+      }
+    }
+    const [a, b, c, d, e, f, gg, hh] = B.map((v, i) => v / A[i][i]);
+    return `matrix3d(${a},${d},0,${gg},${b},${e},0,${hh},0,0,1,0,${c},${f},0,1)`;
+  }
+  const stageEl = document.getElementById("stage");
+  const STORE = "hmTune-" + VIEW;
+  const DEFAULTS = { frame: 100, shift: VIEW === "display" ? 3 : 0, kv: 0, kh: 0 };
+  let tune = { ...DEFAULTS };
+  try { const v = JSON.parse(localStorage.getItem(STORE) || "{}"); for (const k in DEFAULTS) if (Number.isFinite(v[k])) tune[k] = v[k]; } catch {}
+  try { const old = parseFloat(localStorage.getItem("shiftCm")); if (VIEW === "display" && Number.isFinite(old) && !localStorage.getItem(STORE)) tune.shift = old; } catch {}
+  const $ = id => document.getElementById(id);
+  const tEls = { frame: $("tFrame"), shift: $("tShift"), kv: $("tKv"), kh: $("tKh") }, oEls = { frame: $("oFrame"), shift: $("oShift"), kv: $("oKv"), kh: $("oKh") };
+  const fmt = { frame: v => v + "%", shift: v => (v > 0 ? "下へ " : v < 0 ? "上へ " : "") + Math.abs(v).toFixed(1) + "cm", kv: v => String(v), kh: v => String(v) };
+  function applyKeystone() {
+    const w = stageEl.offsetWidth, h = stageEl.offsetHeight;
+    if (!tune.kv && !tune.kh) { stageEl.style.transform = ""; return; }
+    // kv > 0: top edge narrower; kh > 0: left edge shorter
+    const dt = w * Math.max(tune.kv, 0) / 200, db = w * Math.max(-tune.kv, 0) / 200;
+    const dl = h * Math.max(tune.kh, 0) / 200, dr = h * Math.max(-tune.kh, 0) / 200;
+    stageEl.style.transform = quadMatrix(w, h, [[dt, dl], [w - dt, dr], [w - db, h - dr], [db, h - dl]]);
+  }
+  function applyTune(save) {
+    document.body.style.setProperty("--shift", tune.shift + "cm");
+    if (frameK !== tune.frame / 100) { frameK = tune.frame / 100; drawInstrument(); }
+    applyKeystone();
+    for (const k in tEls) { tEls[k].value = tune[k]; oEls[k].textContent = fmt[k](tune[k]); }
+    if (save) try { localStorage.setItem(STORE, JSON.stringify(tune)); } catch {}
+  }
+  for (const k in tEls) tEls[k].addEventListener("input", () => { tune[k] = parseFloat(tEls[k].value); applyTune(true); });
+  new ResizeObserver(applyKeystone).observe(document.body);
+  const tunePanel = document.getElementById("tune");
+  const toggleTune = open => { tunePanel.hidden = !(open ?? tunePanel.hidden); };
+  document.getElementById("tuneBtn").addEventListener("click", () => toggleTune());
+  $("tClose").addEventListener("click", () => toggleTune(false));
+  $("tReset").addEventListener("click", () => { tune = { ...DEFAULTS }; applyTune(true); });
+  const nudge = document.getElementById("nudge"); let hideT = 0;
+  addEventListener("keydown", e => {
+    if (VIEW === "controller") return;
+    if (e.key === "Escape") { toggleTune(false); return; }
+    if (e.target instanceof HTMLInputElement) return;
+    if (e.key === "p" || e.key === "P") { toggleTune(); return; }
+    if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+    e.preventDefault();
+    const step = e.shiftKey ? 1 : .1;
+    tune.shift = Math.round((tune.shift + (e.key === "ArrowDown" ? step : -step)) * 10) / 10;
+    tune.shift = Math.max(-10, Math.min(10, tune.shift));
+    applyTune(true);
+    nudge.textContent = `位置: ${fmt.shift(tune.shift)}（↑↓で調整）`;
+    nudge.classList.add("on"); clearTimeout(hideT); hideT = setTimeout(() => nudge.classList.remove("on"), 1500);
+  });
+
+  // The display has no buttons, so audio must be unlocked once by a click (or a kiosk autoplay flag).
+  if (VIEW === "display") {
+    const unlock = document.getElementById("unlock");
+    initAudio();
+    const check = () => { unlock.hidden = ctx.state === "running"; };
+    check();
+    ctx.onstatechange = check;
+    const go = () => { ctx.resume().then(check); };
+    unlock.addEventListener("click", go);
+    addEventListener("pointerdown", go);
+    addEventListener("keydown", go);
+  }
+
+  /* ---------- Visuals ---------- */
+  const cv = document.getElementById("fx"), g = cv.getContext("2d");
+  const bcv = document.getElementById("base"), bg = bcv.getContext("2d");
+  let scale = 1;
+  function resize() {
+    const r = cv.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+    cv.width = bcv.width = Math.round(r.width * dpr); cv.height = bcv.height = Math.round(r.height * dpr);
+    scale = cv.width / W;
+    drawInstrument();
+  }
+
+  // X-ray style drawing of the instrument (static layer). Pure black stays transparent on the display.
+  function rrect(c, x, y, w, h, r) { c.beginPath(); c.roundRect ? c.roundRect(x, y, w, h, r) : c.rect(x, y, w, h); }
+  function glowStroke(c, color, width, blur) { c.strokeStyle = color; c.lineWidth = width; c.shadowColor = "#3cc8ff"; c.shadowBlur = blur; c.stroke(); c.shadowBlur = 0; }
+  // two-pass line: a wide soft glow under a thin bright core, like the X-ray look
+  function xray(c, color, width, blur) {
+    c.save();
+    c.strokeStyle = "rgba(60,200,255,.18)"; c.lineWidth = width * 3.2; c.shadowColor = "#3cc8ff"; c.shadowBlur = blur * 1.6; c.stroke();
+    c.restore();
+    glowStroke(c, color, width, blur * .5);
+  }
+  function vgrad(c, y0, y1, stops) { const gr = c.createLinearGradient(0, y0, 0, y1); stops.forEach(([o, col]) => gr.addColorStop(o, col)); return gr; }
+  const DEPTH = 40; // visible thickness of the case's front face (seen slightly from the front)
+  let frameK = 1; // 0–2: how solid the case and keys look
+  function drawInstrument() {
+    const c = bg;
+    c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, bcv.width, bcv.height);
+    c.setTransform(scale * SX, 0, 0, scale, OX * scale, 0);
+    const line = "#3cc8ff", bright = "#9fe9ff", soft = "rgba(60,200,255,.45)", faint = "rgba(60,200,255,.22)";
+
+    // ---- mouthpiece (after the product photo): rounded tip, neck, flange, slightly tapered tube, socket at the case
+    const tube = (x0, x1, h0, h1, rad) => {
+      c.beginPath();
+      c.moveTo(x0 + rad, MOUTH_Y - h0 / 2); c.lineTo(x1, MOUTH_Y - h1 / 2); c.lineTo(x1, MOUTH_Y + h1 / 2); c.lineTo(x0 + rad, MOUTH_Y + h0 / 2);
+      c.quadraticCurveTo(x0, MOUTH_Y + h0 / 2, x0, MOUTH_Y); c.quadraticCurveTo(x0, MOUTH_Y - h0 / 2, x0 + rad, MOUTH_Y - h0 / 2); c.closePath();
+      c.fillStyle = vgrad(c, MOUTH_Y - h1 / 2, MOUTH_Y + h1 / 2, [[0, "rgba(160,230,255,.10)"], [.3, "rgba(170,235,255,.36)"], [.6, "rgba(60,200,255,.08)"], [1, "rgba(60,200,255,.04)"]]);
+      c.fill(); xray(c, line, 2.4, 10);
+      c.beginPath(); c.moveTo(x0 + rad + 2, MOUTH_Y - h0 * .22); c.lineTo(x1 - 3, MOUTH_Y - h1 * .22); glowStroke(c, "rgba(200,245,255,.55)", 1.8, 4);
+    };
+    tube(154, BODY.x0 - 12, 34, 43, 2);   // tube, widening toward the case
+    tube(118, 140, 24, 24, 2);            // neck
+    tube(102, 122, 31, 31, 10);           // rounded tip
+    // flange
+    c.beginPath(); c.ellipse(145, MOUTH_Y, 10, 36, 0, 0, Math.PI * 2);
+    c.fillStyle = "rgba(60,200,255,.14)"; c.fill(); xray(c, line, 2.4, 10);
+    c.beginPath(); c.ellipse(142, MOUTH_Y, 6, 31, 0, Math.PI * .6, Math.PI * 1.4); glowStroke(c, "rgba(200,245,255,.55)", 1.8, 4);
+    // socket where it plugs into the case
+    rrect(c, BODY.x0 - 16, MOUTH_Y - 30, 20, 60, 8);
+    c.fillStyle = "rgba(60,200,255,.14)"; c.fill(); xray(c, line, 2.4, 10);
+
+    // ---- case: front face (thickness) first, then the top face
+    rrect(c, BODY.x0, BODY.y0 + 30, BODY.x1 - BODY.x0, BODY.y1 - BODY.y0 - 30 + DEPTH, 20);
+    c.fillStyle = vgrad(c, BODY.y1 - 10, BODY.y1 + DEPTH, [[0, "rgba(60,200,255,.16)"], [1, "rgba(60,200,255,.03)"]]);
+    c.fill(); xray(c, soft, 2.5, 10);
+    // blue trim on the front face
+    c.fillStyle = vgrad(c, BODY.y1 + 6, BODY.y1 + 22, [[0, "rgba(70,150,255,.75)"], [1, "rgba(40,110,255,.35)"]]);
+    rrect(c, KB_X0 - 4, BODY.y1 + 4, KB_X1 - KB_X0 + 8, 14, 4); c.fill();
+
+    rrect(c, BODY.x0, BODY.y0, BODY.x1 - BODY.x0, BODY.y1 - BODY.y0, 18);
+    c.fillStyle = vgrad(c, BODY.y0, BODY.y1, [[0, "rgba(120,215,255,.12)"], [.5, "rgba(60,200,255,.05)"], [1, "rgba(60,200,255,.09)"]]);
+    c.fill(); xray(c, line, 3.5, 16);
+    // top edge highlight
+    c.beginPath(); c.moveTo(BODY.x0 + 34, BODY.y0 + 2); c.lineTo(BODY.x1 - 30, BODY.y0 + 2); glowStroke(c, "rgba(210,248,255,.7)", 2, 6);
+    // blue trim along both long sides of the top face
+    c.fillStyle = vgrad(c, BODY.y0 + 6, BODY.y0 + 22, [[0, "rgba(90,170,255,.8)"], [1, "rgba(40,110,255,.45)"]]);
+    rrect(c, KB_X0 - 4, BODY.y0 + 4, KB_X1 - KB_X0 + 8, 16, 3); c.fill();
+    c.fillStyle = "rgba(40,120,255,.6)";
+    rrect(c, KB_X0 - 4, BODY.y1 - 18, KB_X1 - KB_X0 + 8, 15, 3); c.fill();
+    // white end caps (after the product photo): rounded outer corners, a bevel line, the label panel on the left,
+    // and the small clip that stands out of the right end
+    const capL = { x: BODY.x0, w: KB_X0 - BODY.x0 }, capR = { x: KB_X1, w: BODY.x1 - KB_X1 };
+    rrect(c, capL.x, BODY.y0, capL.w + 6, BODY.y1 - BODY.y0, [34, 6, 6, 34]);
+    let gr = c.createLinearGradient(capL.x, 0, capL.x + capL.w, 0);
+    gr.addColorStop(0, "rgba(150,225,255,.20)"); gr.addColorStop(.35, "rgba(150,225,255,.10)"); gr.addColorStop(1, "rgba(60,200,255,.05)");
+    c.fillStyle = gr; c.fill(); xray(c, line, 2.6, 10);
+    rrect(c, capL.x + 12, BODY.y0 + 12, capL.w - 18, BODY.y1 - BODY.y0 - 24, [26, 4, 4, 26]); glowStroke(c, soft, 1.6, 0);
+    rrect(c, capL.x + capL.w * .48, BODY.y0 + 50, capL.w * .3, BODY.y1 - BODY.y0 - 100, 4); glowStroke(c, faint, 1.4, 0); // label panel
+    rrect(c, capR.x - 6, BODY.y0, capR.w + 6, BODY.y1 - BODY.y0, [6, 30, 30, 6]);
+    gr = c.createLinearGradient(capR.x, 0, capR.x + capR.w, 0);
+    gr.addColorStop(0, "rgba(60,200,255,.05)"); gr.addColorStop(.65, "rgba(150,225,255,.10)"); gr.addColorStop(1, "rgba(150,225,255,.20)");
+    c.fillStyle = gr; c.fill(); xray(c, line, 2.6, 10);
+    rrect(c, capR.x + 6, BODY.y0 + 12, capR.w - 18, BODY.y1 - BODY.y0 - 24, [4, 22, 22, 4]); glowStroke(c, soft, 1.6, 0);
+    rrect(c, BODY.x1 - 10, BODY.y0 + (BODY.y1 - BODY.y0) * .34, 28, (BODY.y1 - BODY.y0) * .48, [4, 8, 8, 4]); // clip
+    c.fillStyle = "rgba(150,225,255,.12)"; c.fill(); xray(c, line, 2.2, 8);
+
+    // ---- inside: air chamber under the keys, drawn a little deeper (offset) for depth
+    rrect(c, BODY.x0 + 20, KEY_TOP + 12, BODY.x1 - BODY.x0 - 40, KEY_BOTTOM - KEY_TOP - 8, 12);
+    c.fillStyle = "rgba(60,200,255,.05)"; c.fill(); glowStroke(c, faint, 2, 0);
+    c.setLineDash([10, 10]);
+    c.beginPath(); c.moveTo(BODY.x0, MOUTH_Y); c.lineTo(KB_X0 - 20, MOUTH_Y); c.lineTo(KB_X0 - 4, AIR_Y); c.lineTo(KB_X1, AIR_Y); glowStroke(c, faint, 2, 0);
+    c.setLineDash([]);
+
+    // ---- white keys: top face + front lip (the key's thickness)
+    KEYS.filter(k => !k.black).forEach(k => {
+      const x = k.L + 2, w = k.R - k.L - 4;
+      rrect(c, x, KEY_BOTTOM - 6, w, 18, [0, 0, 6, 6]);
+      c.fillStyle = vgrad(c, KEY_BOTTOM - 6, KEY_BOTTOM + 12, [[0, "rgba(60,200,255,.22)"], [1, "rgba(60,200,255,.06)"]]);
+      c.fill(); glowStroke(c, soft, 2, 4);
+      rrect(c, x, KEY_TOP, w, KEY_BOTTOM - KEY_TOP, [2, 2, 5, 5]);
+      c.fillStyle = vgrad(c, KEY_TOP, KEY_BOTTOM, [[0, "rgba(150,220,255,.08)"], [.7, "rgba(150,220,255,.16)"], [1, "rgba(190,240,255,.24)"]]);
+      c.fill(); xray(c, line, 2.2, 10);
+      c.beginPath(); c.moveTo(x + 5, KEY_BOTTOM - 3); c.lineTo(x + w - 5, KEY_BOTTOM - 3); glowStroke(c, "rgba(220,250,255,.75)", 1.8, 4);
+    });
+    // ---- black keys: raised, with a soft shadow, front face and a lit top
+    KEYS.filter(k => k.black).forEach(k => {
+      const x = k.cx - BLACK_W / 2;
+      c.save(); c.shadowColor = "rgba(0,0,0,1)"; c.shadowBlur = 14; c.shadowOffsetY = 8;
+      rrect(c, x + 2, KEY_TOP, BLACK_W - 4, KEY_STEP - KEY_TOP + 6, 6); c.fillStyle = "rgba(0,0,0,.6)"; c.fill(); c.restore();
+      rrect(c, x, KEY_STEP - 20, BLACK_W, 30, [0, 0, 6, 6]);
+      c.fillStyle = vgrad(c, KEY_STEP - 20, KEY_STEP + 10, [[0, "rgba(40,120,170,.55)"], [1, "rgba(12,50,80,.7)"]]);
+      c.fill(); glowStroke(c, soft, 2, 4);
+      rrect(c, x, KEY_TOP - 4, BLACK_W, KEY_STEP - KEY_TOP - 12, [2, 2, 4, 4]);
+      c.fillStyle = vgrad(c, KEY_TOP, KEY_STEP, [[0, "rgba(14,52,84,.55)"], [.85, "rgba(30,95,140,.6)"], [1, "rgba(60,160,220,.65)"]]);
+      c.fill(); xray(c, line, 2.2, 8);
+      c.beginPath(); c.moveTo(x + 6, KEY_TOP + 4); c.lineTo(x + 6, KEY_STEP - 26); glowStroke(c, "rgba(200,245,255,.5)", 1.6, 3);
+    });
+    // above 100%: lay a second copy on top so the frame becomes more solid
+    bcv.style.opacity = Math.min(1, frameK);
+    if (frameK > 1) {
+      const copy = document.createElement("canvas"); copy.width = bcv.width; copy.height = bcv.height;
+      copy.getContext("2d").drawImage(bcv, 0, 0);
+      c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = frameK - 1; c.drawImage(copy, 0, 0); c.globalAlpha = 1;
+    }
+  }
+  new ResizeObserver(resize).observe(cv); resize();
+
+  // Air path: mouthpiece → tube → reed chamber → the pressed reed → through its open valve
+  function airPath(n) {
+    const x = n.x;
+    return [[100,MOUTH_Y],[BODY.x0,MOUTH_Y],[KB_X0 - 20,MOUTH_Y],[KB_X0 - 4,AIR_Y],[x,AIR_Y],[x,n.reedTop + 6],[x,n.reedBase],[x,n.reedBase + 30]];
+  }
+  function pointAt(pts, s) {
+    let total = 0; const seg = [];
+    for (let k = 1; k < pts.length; k++) { const l = Math.hypot(pts[k][0]-pts[k-1][0], pts[k][1]-pts[k-1][1]); seg.push(l); total += l; }
+    let d = s * total;
+    for (let k = 0; k < seg.length; k++) {
+      if (d <= seg[k]) { const u = d / seg[k]; return [pts[k][0] + (pts[k+1][0]-pts[k][0])*u, pts[k][1] + (pts[k+1][1]-pts[k][1])*u, k]; }
+      d -= seg[k];
+    }
+    const p = pts[pts.length-1]; return [p[0], p[1], seg.length-1];
+  }
+  const particles = [];
+  const rings = [];
+
+  function drawReed(x, top, base, dx, alpha, glow) {
+    // cantilever: fixed at the rivet, the free tip swings the most
+    const steps = 10, left = [], right = [];
+    for (let k = 0; k <= steps; k++) {
+      const t = k / steps, y = base - (base - top) * t, off = dx * t * t;
+      left.push([x - REED_W/2 + off, y]); right.push([x + REED_W/2 + off, y]);
+    }
+    g.beginPath();
+    g.moveTo(left[0][0], left[0][1]);
+    left.forEach(p => g.lineTo(p[0], p[1]));
+    const tip = right[steps];
+    g.quadraticCurveTo((left[steps][0] + tip[0]) / 2, top - 5, tip[0], tip[1]);
+    for (let k = steps; k >= 0; k--) g.lineTo(right[k][0], right[k][1]);
+    g.closePath();
+    g.globalAlpha = alpha;
+    g.shadowColor = "#3cc8ff"; g.shadowBlur = glow;
+    const rg = g.createLinearGradient(x - REED_W / 2, 0, x + REED_W / 2, 0);
+    rg.addColorStop(0, "#eafcff"); rg.addColorStop(.45, "#b4ecff"); rg.addColorStop(1, "#4fb6e6");
+    g.fillStyle = rg; g.fill();
+    g.shadowBlur = 0; g.globalAlpha = 1;
+  }
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(.05, (now - last) / 1000); last = now;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, cv.width, cv.height);
+    g.setTransform(scale * SX, 0, 0, scale, OX * scale, 0);
+
+    // reeds at rest (the playing ones are drawn moving below)
+    const busy = new Set(NOTES.filter((_, i) => viz[i].amp >= .003 || viz[i].valve >= .003).map(n => n.k));
+    KEYS.forEach((k, i) => {
+      if (busy.has(i)) return;
+      drawReed(k.cx, k.reedTop, k.reedBase, 0, .55, 6);
+      g.beginPath(); g.arc(k.cx, k.reedBase - 5, 3, 0, Math.PI * 2);
+      g.strokeStyle = "rgba(60,200,255,.8)"; g.lineWidth = 1.5; g.stroke();
+    });
+
+    let anyOn = false, stage = -1;
+    viz.forEach((z, i) => {
+      const n = NOTES[i];
+      const sounding = z.on && (!z.offAt || now < z.offAt);
+      if (z.on && z.offAt && now >= z.offAt) z.on = false;
+      const held = sounding ? (now - z.since) / 1000 : 0;
+      // reed starts after air reaches it; valve opens immediately with the key
+      const targetValve = sounding ? 1 : 0;
+      const targetAmp = sounding && held > .06 ? 1 : 0;
+      z.valve += (targetValve - z.valve) * Math.min(1, dt * 22);
+      z.amp += (targetAmp - z.amp) * Math.min(1, dt * (targetAmp ? 14 : 9));
+      if (sounding) { anyOn = true; stage = Math.max(stage, held > .06 ? 2 : held > .02 ? 1 : 0); }
+      if (z.amp < .003 && z.valve < .003) return;
+
+      // the pressed key: lit and pushed down a little
+      {
+        const [L, R, uL, uR] = n.keyShape, dy = z.valve * 6, inset = 3;
+        g.beginPath();
+        g.moveTo(uL + inset, KEY_TOP + dy); g.lineTo(uR - inset, KEY_TOP + dy);
+        g.lineTo(uR - inset, KEY_STEP + dy); g.lineTo(R - inset, KEY_STEP + dy);
+        g.lineTo(R - inset, KEY_BOTTOM + dy); g.lineTo(L + inset, KEY_BOTTOM + dy);
+        g.lineTo(L + inset, KEY_STEP + dy); g.lineTo(uL + inset, KEY_STEP + dy);
+        g.closePath();
+        const kg = g.createLinearGradient(0, KEY_TOP, 0, KEY_BOTTOM);
+        kg.addColorStop(0, `rgba(184,240,255,${.55 * z.valve})`);
+        kg.addColorStop(1, `rgba(60,200,255,${.3 * z.valve})`);
+        g.fillStyle = kg;
+        g.shadowColor = "#3cc8ff"; g.shadowBlur = 24 * z.valve;
+        g.fill();
+        g.shadowBlur = 0;
+        g.strokeStyle = `rgba(220,248,255,${.95 * z.valve})`; g.lineWidth = 3; g.stroke();
+      }
+
+      // valve under the reed
+      const vy = n.reedBase + 8 + z.valve * 6;
+      g.globalAlpha = .9 * z.valve;
+      g.shadowColor = "#3cc8ff"; g.shadowBlur = 14;
+      g.fillStyle = "#9fe9ff";
+      g.fillRect(n.x - 13, vy - 4, 26, 8);
+      g.shadowBlur = 0; g.globalAlpha = 1;
+
+      // shown slowed down: the real reed moves too fast to see
+      const visHz = n.freq / 38;
+      z.phase += dt * visHz * Math.PI * 2;
+      const A = (reduceMotion ? 2.5 : 6) * z.amp;
+      drawReed(n.x, n.reedTop, n.reedBase, -A, .16 * z.amp, 6);
+      drawReed(n.x, n.reedTop, n.reedBase, A, .16 * z.amp, 6);
+      drawReed(n.x, n.reedTop, n.reedBase, A * Math.sin(z.phase), .95 * Math.max(z.amp, .55), 16 + 10 * z.amp);
+      // rivet
+      g.beginPath(); g.arc(n.x, n.reedBase - 5, 4, 0, Math.PI * 2);
+      g.fillStyle = "#7fdcff"; g.globalAlpha = z.amp; g.fill(); g.globalAlpha = 1;
+
+      if (sounding) {
+        // air particles
+        const rate = reduceMotion ? 30 : 90;
+        z.acc = (z.acc || 0) + dt * rate;
+        while (z.acc >= 1) { z.acc -= 1; particles.push({ i, s: 0, v: .55 + Math.random() * .35, j: (Math.random() - .5) * 10 }); }
+        // sound rings above the instrument, spaced by pitch
+        z.ringT -= dt;
+        if (z.ringT <= 0 && z.amp > .5) { rings.push({ x: n.x, y: BODY.y0 + 10, r: 0, a: 1 }); z.ringT = .3 * (262 / n.freq); }
+      }
+    });
+
+    // particles
+    g.globalCompositeOperation = "lighter";
+    for (let k = particles.length - 1; k >= 0; k--) {
+      const p = particles[k];
+      p.s += dt * p.v;
+      if (p.s >= 1) { particles.splice(k, 1); continue; }
+      const pts = airPath(NOTES[p.i]);
+      const [x, y, segIdx] = pointAt(pts, p.s);
+      const fade = p.s > .85 ? (1 - p.s) / .15 : 1;
+      const jx = segIdx >= 4 ? p.j * .4 : 0, jy = segIdx < 4 ? p.j * .6 : 0;
+      const rad = g.createRadialGradient(x + jx, y + jy, 0, x + jx, y + jy, 7);
+      rad.addColorStop(0, `rgba(190,240,255,${.55 * fade})`);
+      rad.addColorStop(1, "rgba(60,200,255,0)");
+      g.fillStyle = rad;
+      g.beginPath(); g.arc(x + jx, y + jy, 7, 0, Math.PI * 2); g.fill();
+    }
+    // rings
+    for (let k = rings.length - 1; k >= 0; k--) {
+      const r = rings[k];
+      r.r += dt * 120; r.a -= dt * 1.4;
+      if (r.a <= 0) { rings.splice(k, 1); continue; }
+      g.beginPath();
+      g.arc(r.x, r.y, 30 + r.r, Math.PI * 1.18, Math.PI * 1.82);
+      g.strokeStyle = `rgba(110,215,255,${r.a * .7})`; g.lineWidth = 3;
+      g.stroke();
+    }
+    g.globalCompositeOperation = "source-over";
+
+    stepEls.forEach((el, k) => el.classList.toggle("on", anyOn && k <= stage));
+    if (!anyOn && lastNote !== null && viz.every(z => z.amp < .05)) label.classList.remove("on");
+    requestAnimationFrame(frame);
+  }
+  applyTune(false);
+  requestAnimationFrame(frame);
+})();
+</script>
