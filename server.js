@@ -60,7 +60,7 @@ http.createServer((req, res) => {
       try {
         const { id, held } = JSON.parse(body);
         if (typeof id !== "string" || !Array.isArray(held)) throw 0;
-        const clean = held.filter(i => Number.isInteger(i) && i >= 0 && i < 8);
+        const clean = held.filter(i => Number.isInteger(i) && i >= 0 && i < 32);
         controllers.set(id.slice(0, 40), { held: clean, seen: Date.now() });
         broadcast(false);
         res.writeHead(204); res.end();

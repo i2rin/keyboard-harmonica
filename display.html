@@ -106,7 +106,7 @@ body:not(.v-display) .hint-remote { display: none; }
 body.v-controller .stage { display: none; }
 body.v-controller { place-items: stretch; padding-block: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-bottom, 0px)); }
 body.v-controller .ctrl {
-  display: grid; grid-template-rows: auto 1fr auto; gap: clamp(12px, 3vh, 28px);
+  display: grid; grid-template-rows: auto auto auto 1fr auto; gap: clamp(12px, 3vh, 28px);
   width: 100%; height: 100%; max-width: 1400px; margin-inline: auto; min-width: 0;
 }
 .ctrl header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
@@ -114,13 +114,25 @@ body.v-controller .ctrl {
 .ctrl .cstatus { font-size: 14px; color: var(--glow-dim); white-space: nowrap; }
 .ctrl .cstatus.ok { color: var(--glow); }
 .ctrl .cstatus::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; background: currentColor; }
-.ctrl .cpad { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: clamp(8px, 1.4vw, 18px); min-height: 0; }
-.ctrl .key { border-width: 2px; border-radius: 14px; gap: 10px; box-shadow: 0 0 14px rgba(60,200,255,.35), inset 0 0 14px rgba(60,200,255,.2); }
-.ctrl .key .n { font-size: clamp(24px, 4.2vw, 56px); white-space: nowrap; }
-.ctrl .key .c { font-size: clamp(12px, 1.5vw, 18px); }
-.ctrl .key.down { transform: translateY(4px); box-shadow: 0 0 34px var(--glow), inset 0 0 24px rgba(184,240,255,.6); }
+/* tablet keyboard: all 32 keys (F3–C6) laid out like the real instrument; the strip above it is a mini keyboard you slide to move the view */
+.ctrl .mini { position: relative; height: clamp(40px, 7vh, 64px); touch-action: none; cursor: grab; border: 1px solid var(--glow-dim); border-radius: 8px; overflow: hidden; }
+.ctrl .mini i { position: absolute; top: 0; bottom: 0; box-sizing: border-box; border-right: 1px solid rgba(60,200,255,.35); }
+.ctrl .mini i.b { bottom: 42%; background: #06212d; border: 1px solid var(--glow-dim); z-index: 1; }
+.ctrl .mini i.on { background: var(--glow); }
+.ctrl .mini .win { position: absolute; top: 0; bottom: 0; z-index: 2; pointer-events: none; box-sizing: border-box; border: 3px solid var(--glow-hot); border-radius: 6px; background: rgba(60,200,255,.12); box-shadow: 0 0 12px var(--glow); }
+.ctrl .minihint { margin: -6px 0 0; font-size: clamp(12px, 1.5vw, 15px); color: var(--glow-dim); text-align: center; }
+.ctrl .cpad { --ww: max(56px, calc((min(100vw, 1400px) - 32px) / 10)); --gap: clamp(4px, .6vw, 8px); position: relative; min-height: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.ctrl .cpad::-webkit-scrollbar { display: none; }
+.ctrl .kb { position: relative; height: 100%; width: calc(19 * var(--ww)); }
+.ctrl .key { position: absolute; top: 0; bottom: 0; left: calc(var(--x) * var(--ww) + var(--gap) / 2); width: calc(var(--ww) - var(--gap)); border-width: 2px; border-radius: 0 0 14px 14px; place-content: end center; gap: 6px; padding-bottom: clamp(14px, 3vh, 32px); background: rgba(60,200,255,.06); box-shadow: 0 0 14px rgba(60,200,255,.35), inset 0 0 14px rgba(60,200,255,.2); }
+.ctrl .key .n { font-size: clamp(18px, 3vw, 40px); white-space: nowrap; }
+.ctrl .key .c { font-size: clamp(11px, 1.3vw, 16px); }
+.ctrl .key.black { bottom: 40%; z-index: 1; left: calc(var(--x) * var(--ww) - var(--ww) * .3); width: calc(var(--ww) * .6); border-radius: 0 0 10px 10px; border-color: var(--glow-dim); background: #06212d; padding-bottom: 12px; gap: 3px; box-shadow: 0 6px 12px #000, inset 0 0 10px rgba(60,200,255,.15); }
+.ctrl .key.black .n { font-size: clamp(13px, 1.8vw, 22px); }
+.ctrl .key.black .c { font-size: clamp(10px, 1.1vw, 13px); }
+.ctrl .key.down { background: rgba(60,200,255,.32); transform: translateY(4px); box-shadow: 0 0 34px var(--glow), inset 0 0 24px rgba(184,240,255,.6); }
+.ctrl .key.black.down { background: rgba(60,200,255,.5); border-color: var(--glow-hot); }
 .ctrl footer { font-size: clamp(14px, 1.8vw, 20px); color: var(--glow); text-align: center; }
-@media (orientation: portrait) { .ctrl .cpad { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 </style>
 
 <div class="stage" id="stage">
@@ -146,7 +158,7 @@ body.v-controller .ctrl {
       <li data-s="2"><b>3</b>空気がリードをふるわせて音になる</li>
     </ol>
     <span class="hint hint-local">ボタンを押しているあいだ音が鳴ります</span>
-    <span class="hint hint-remote">手元のボタンを押しているあいだ音が鳴ります</span>
+    <span class="hint hint-remote">手元の鍵盤を押しているあいだ音が鳴ります</span>
   </div>
 
   <div class="pad" id="pad"></div>
@@ -174,10 +186,12 @@ body.v-controller .ctrl {
 
 <main class="ctrl" id="ctrl">
   <header>
-    <h1>ボタンを押して、鍵盤ハーモニカを鳴らそう</h1>
+    <h1>鍵盤を押して、鍵盤ハーモニカを鳴らそう</h1>
     <span class="cstatus" id="cstatus">表示画面を探しています</span>
   </header>
-  <div class="cpad" id="cpad"></div>
+  <div class="mini" id="mini" role="scrollbar" aria-controls="cpad" aria-label="鍵盤の表示位置"><div class="win" id="miniWin"></div></div>
+  <p class="minihint">上の小さな鍵盤を左右にスライドすると、ほかの鍵盤に移動できます</p>
+  <div class="cpad" id="cpad"><div class="kb" id="kb"></div></div>
   <footer>押しているあいだ、正面の画面でリードがふるえます</footer>
 </main>
 
@@ -214,21 +228,22 @@ body.v-controller .ctrl {
     k.uL = prev && prev.black ? prev.cx + BLACK_W / 2 : k.L;
     k.uR = next && next.black ? next.cx - BLACK_W / 2 : k.R;
   });
-  const NOTES = [
-    { name: "ド",   code: "C4", midi: 60, key: "a", alt: "1" },
-    { name: "レ",   code: "D4", midi: 62, key: "s", alt: "2" },
-    { name: "ミ",   code: "E4", midi: 64, key: "d", alt: "3" },
-    { name: "ファ", code: "F4", midi: 65, key: "f", alt: "4" },
-    { name: "ソ",   code: "G4", midi: 67, key: "g", alt: "5" },
-    { name: "ラ",   code: "A4", midi: 69, key: "h", alt: "6" },
-    { name: "シ",   code: "B4", midi: 71, key: "j", alt: "7" },
-    { name: "ド",   code: "C5", midi: 72, key: "k", alt: "8" },
-  ];
-  NOTES.forEach(n => {
-    const k = KEYS[n.midi - LOW_MIDI];
-    n.freq = 440 * Math.pow(2, (n.midi - 69) / 12);
-    n.x = k.cx; n.reedTop = k.reedTop; n.reedBase = k.reedBase; n.k = n.midi - LOW_MIDI;
-    n.keyShape = [k.L, k.R, k.uL, k.uR];
+  // Every key of the instrument is playable. The 8 keys ド–ド (C4–C5) also get a button on the one-screen version and letter/number shortcuts.
+  const SOLFA = ["ド", "ド♯", "レ", "レ♯", "ミ", "ファ", "ファ♯", "ソ", "ソ♯", "ラ", "ラ♯", "シ"];
+  const LETTER = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  const SHORTCUT = { C4: "a1", "C#4": "w", D4: "s2", "D#4": "e", E4: "d3", F4: "f4", "F#4": "t", G4: "g5", "G#4": "y", A4: "h6", "A#4": "u", B4: "j7", C5: "k8" };
+  const NOTES = KEYS.map((k, i) => {
+    const code = LETTER[k.midi % 12] + (Math.floor(k.midi / 12) - 1);
+    const keys = SHORTCUT[code] || "";
+    return {
+      name: SOLFA[k.midi % 12], code, midi: k.midi, black: k.black, k: i,
+      pad: !k.black && keys.length === 2, shortcuts: [...keys],
+      freq: 440 * Math.pow(2, (k.midi - 69) / 12),
+      x: k.cx, reedTop: k.reedTop, reedBase: k.reedBase,
+      keyShape: k.black ? null : [k.L, k.R, k.uL, k.uR],
+      // position on the tablet keyboard, in white-key widths
+      at: ((k.black ? k.cx : k.L) - KB_X0) / WHITE_P,
+    };
   });
 
   const VIEW = "display"; // display-only build: no on-screen buttons
@@ -312,7 +327,7 @@ body.v-controller .ctrl {
   // What should be sounding = keys held here ∪ keys held on the tablet(s)
   const localHeld = new Set(), remoteHeld = new Set();
   function sync() {
-    if (VIEW === "controller") { keys.forEach((b, i) => b.classList.toggle("down", localHeld.has(i))); transport.send([...localHeld]); return; }
+    if (VIEW === "controller") { keys.forEach((b, i) => { b.classList.toggle("down", localHeld.has(i)); miniKeys[i].classList.toggle("on", localHeld.has(i)); }); transport.send([...localHeld]); return; }
     NOTES.forEach((_, i) => {
       const want = localHeld.has(i) || remoteHeld.has(i);
       if (want && !active.has(i)) startNote(i);
@@ -328,7 +343,7 @@ body.v-controller .ctrl {
     const v = startVoice(NOTES[i].freq);
     active.set(i, v);
     const z = viz[i]; z.on = true; z.since = performance.now(); z.offAt = 0;
-    keys[i].classList.add("down");
+    keys[i]?.classList.add("down");
     showLabel(i);
     requestWake();
   }
@@ -339,14 +354,16 @@ body.v-controller .ctrl {
     const endT = stopVoice(v);
     const z = viz[i];
     z.offAt = performance.now() + Math.max(0, (endT - ctx.currentTime) * 1000);
-    keys[i].classList.remove("down");
+    keys[i]?.classList.remove("down");
   }
 
   /* ---------- UI ---------- */
-  const pad = document.getElementById(VIEW === "controller" ? "cpad" : "pad");
+  const pad = document.getElementById(VIEW === "controller" ? "kb" : "pad");
   const keys = NOTES.map((n, i) => {
+    if (VIEW !== "controller" && !n.pad) return null;
     const b = document.createElement("button");
-    b.type = "button"; b.className = "key"; b.id = "key-" + n.code;
+    b.type = "button"; b.className = n.black ? "key black" : "key"; b.id = "key-" + n.code;
+    b.style.setProperty("--x", n.at);
     b.setAttribute("aria-label", `${n.name}（${n.code}）を鳴らす`);
     b.innerHTML = `<span class="n">${n.name}</span><span class="c">${n.code}</span>`;
     b.addEventListener("pointerdown", e => { e.preventDefault(); b.setPointerCapture?.(e.pointerId); press(i); });
@@ -357,8 +374,40 @@ body.v-controller .ctrl {
     pad.appendChild(b);
     return b;
   });
+
+  // Tablet: the keyboard is wider than the screen. Sliding a finger on the mini keyboard moves the view.
+  const scroller = document.getElementById("cpad"), mini = document.getElementById("mini"), miniWin = document.getElementById("miniWin");
+  const miniKeys = NOTES.map(n => {
+    const el = document.createElement("i");
+    if (n.black) { el.className = "b"; el.style.left = (n.at - .3) / 19 * 100 + "%"; el.style.width = .6 / 19 * 100 + "%"; }
+    else { el.style.left = n.at / 19 * 100 + "%"; el.style.width = 100 / 19 + "%"; }
+    mini.appendChild(el);
+    return el;
+  });
+  function showWindow() {
+    const w = scroller.scrollWidth;
+    miniWin.style.left = scroller.scrollLeft / w * 100 + "%";
+    miniWin.style.width = Math.min(1, scroller.clientWidth / w) * 100 + "%";
+  }
+  if (VIEW === "controller") {
+    let grab = null; // where in the window the finger caught it, so the view doesn't jump
+    const frac = e => { const r = mini.getBoundingClientRect(); return (e.clientX - r.left) / r.width; };
+    mini.addEventListener("pointerdown", e => {
+      e.preventDefault(); mini.setPointerCapture?.(e.pointerId);
+      const w = scroller.scrollWidth, f = frac(e), l = scroller.scrollLeft / w, r = l + scroller.clientWidth / w;
+      grab = f >= l && f <= r ? f - l : scroller.clientWidth / w / 2;
+      scroller.scrollLeft = (f - grab) * w;
+    });
+    mini.addEventListener("pointermove", e => { if (grab !== null) scroller.scrollLeft = (frac(e) - grab) * scroller.scrollWidth; });
+    ["pointerup", "pointercancel"].forEach(ev => mini.addEventListener(ev, () => grab = null));
+    scroller.addEventListener("scroll", showWindow, { passive: true });
+    new ResizeObserver(showWindow).observe(scroller);
+    // start with ド (C4) at the left edge
+    requestAnimationFrame(() => { scroller.scrollLeft = NOTES.find(n => n.code === "C4").at / 19 * scroller.scrollWidth; showWindow(); });
+  }
+
   const keyMap = {};
-  NOTES.forEach((n, i) => { keyMap[n.key] = i; keyMap[n.alt] = i; });
+  NOTES.forEach((n, i) => n.shortcuts.forEach(c => keyMap[c] = i));
   addEventListener("keydown", e => { const i = keyMap[e.key.toLowerCase()]; if (i !== undefined && !e.repeat) press(i); });
   addEventListener("keyup", e => { const i = keyMap[e.key.toLowerCase()]; if (i !== undefined) release(i); });
   addEventListener("blur", () => [...localHeld].forEach(release));
@@ -741,13 +790,18 @@ body.v-controller .ctrl {
 
       // the pressed key: lit and pushed down a little
       {
-        const [L, R, uL, uR] = n.keyShape, dy = z.valve * 6, inset = 3;
+        const dy = z.valve * 6, inset = 3;
         g.beginPath();
-        g.moveTo(uL + inset, KEY_TOP + dy); g.lineTo(uR - inset, KEY_TOP + dy);
-        g.lineTo(uR - inset, KEY_STEP + dy); g.lineTo(R - inset, KEY_STEP + dy);
-        g.lineTo(R - inset, KEY_BOTTOM + dy); g.lineTo(L + inset, KEY_BOTTOM + dy);
-        g.lineTo(L + inset, KEY_STEP + dy); g.lineTo(uL + inset, KEY_STEP + dy);
-        g.closePath();
+        if (n.black) {
+          g.rect(n.x - BLACK_W / 2 + inset, KEY_TOP - 4 + dy, BLACK_W - inset * 2, KEY_STEP - KEY_TOP - 12);
+        } else {
+          const [L, R, uL, uR] = n.keyShape;
+          g.moveTo(uL + inset, KEY_TOP + dy); g.lineTo(uR - inset, KEY_TOP + dy);
+          g.lineTo(uR - inset, KEY_STEP + dy); g.lineTo(R - inset, KEY_STEP + dy);
+          g.lineTo(R - inset, KEY_BOTTOM + dy); g.lineTo(L + inset, KEY_BOTTOM + dy);
+          g.lineTo(L + inset, KEY_STEP + dy); g.lineTo(uL + inset, KEY_STEP + dy);
+          g.closePath();
+        }
         const kg = g.createLinearGradient(0, KEY_TOP, 0, KEY_BOTTOM);
         kg.addColorStop(0, `rgba(184,240,255,${.55 * z.valve})`);
         kg.addColorStop(1, `rgba(60,200,255,${.3 * z.valve})`);
